@@ -1,0 +1,5 @@
+<resources>
+    <!-- Readium adds 40dp of vertical padding to paged EPUB resources; the reader fills the
+         screen instead. -->
+    <dimen name="readium_navigator_epub_vertical_padding">0dp</dimen>
+</resources>
