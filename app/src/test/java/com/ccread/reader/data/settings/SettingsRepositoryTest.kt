@@ -4,6 +4,7 @@ import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
@@ -36,5 +37,35 @@ class SettingsRepositoryTest {
         assertEquals(48, clamped.marginHorizontal)
         assertEquals(2f, clamped.lineSpacing, 0.001f)
         assertEquals(1f, clamped.brightness, 0.001f)
+    }
+
+    @Test
+    fun `custom background is persisted and can be cleared`() = runTest {
+        val store = PreferenceDataStoreFactory.create(
+            scope = backgroundScope,
+            produceFile = { tmp.newFile("settings.preferences_pb") },
+        )
+        val repository = SettingsRepository(store)
+
+        repository.update { it.copy(customBackgroundArgb = 0xFF101112.toInt()) }
+        assertEquals(0xFF101112.toInt(), repository.settings.first().customBackgroundArgb)
+
+        repository.update { it.copy(customBackgroundArgb = null) }
+        assertNull(repository.settings.first().customBackgroundArgb)
+    }
+
+    @Test
+    fun `font color is persisted and can return to the background default`() = runTest {
+        val store = PreferenceDataStoreFactory.create(
+            scope = backgroundScope,
+            produceFile = { tmp.newFile("settings.preferences_pb") },
+        )
+        val repository = SettingsRepository(store)
+
+        repository.update { it.copy(textColorArgb = 0xFF112233.toInt()) }
+        assertEquals(0xFF112233.toInt(), repository.settings.first().textColorArgb)
+
+        repository.update { it.copy(textColorArgb = null) }
+        assertNull(repository.settings.first().textColorArgb)
     }
 }

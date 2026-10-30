@@ -54,12 +54,7 @@ class BookshelfViewModel(
         viewModelScope.launch {
             mutable.update { it.copy(importing = true) }
             val result = importer.import(uri)
-            val duplicateId = if (result == ImportResult.Duplicate) {
-                repository.findByUri(uri.toString())?.id
-            } else {
-                null
-            }
-            val openBookId = result.openedBookId(duplicateId)
+            val openBookId = result.openedBookId()
             mutable.update {
                 it.copy(
                     importing = false,
@@ -122,12 +117,12 @@ private fun ImportResult.message(): String? = when (this) {
     is ImportResult.TooLarge -> "文件超过大小上限（TXT 200MB / EPUB 500MB）"
     ImportResult.UnsupportedFormat -> "只支持 TXT 和 EPUB 文件"
     ImportResult.NotSeekable -> "该文件无法直接读取，请先保存到手机本地存储"
-    ImportResult.Duplicate -> "这本书已经在书架上了"
+    is ImportResult.Duplicate -> "这本书已经在书架上了"
     is ImportResult.Failed -> message
 }
 
-internal fun ImportResult.openedBookId(duplicateId: Long?): Long? = when (this) {
+internal fun ImportResult.openedBookId(): Long? = when (this) {
     is ImportResult.Success -> bookId
-    ImportResult.Duplicate -> duplicateId
+    is ImportResult.Duplicate -> bookId
     else -> null
 }

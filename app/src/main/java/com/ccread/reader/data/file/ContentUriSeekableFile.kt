@@ -2,16 +2,24 @@ package com.ccread.reader.data.file
 
 import android.content.Context
 import android.net.Uri
+import android.os.ParcelFileDescriptor
 import com.ccread.reader.domain.txt.SeekableFile
 import java.io.ByteArrayInputStream
+import java.io.File
 import java.io.FileInputStream
 import java.io.InputStream
 import java.nio.ByteBuffer
 
 class ContentUriSeekableFile(context: Context, uri: Uri) : SeekableFile {
 
-    private val descriptor = context.contentResolver.openFileDescriptor(uri, "r")
-        ?: error("无法打开文件")
+    private val descriptor = if (uri.scheme == "file") {
+        ParcelFileDescriptor.open(
+            File(requireNotNull(uri.path)),
+            ParcelFileDescriptor.MODE_READ_ONLY,
+        )
+    } else {
+        context.contentResolver.openFileDescriptor(uri, "r")
+    } ?: error("无法打开文件")
     private val channel = FileInputStream(descriptor.fileDescriptor).channel
 
     override val sizeBytes: Long = descriptor.statSize.takeIf { it >= 0 } ?: channel.size()

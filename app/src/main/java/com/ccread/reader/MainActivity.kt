@@ -1,10 +1,8 @@
 package com.ccread.reader
 
 import android.content.Intent
-import android.graphics.Color
 import android.net.Uri
 import android.os.Bundle
-import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.getValue
@@ -27,10 +25,7 @@ class MainActivity : FragmentActivity() {
         // plain fragment and drop the stale instance before Compose re-opens the book.
         supportFragmentManager.fragmentFactory = SafeFragmentFactory()
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge(
-            statusBarStyle = SystemBarStyle.light(Color.TRANSPARENT, Color.TRANSPARENT),
-            navigationBarStyle = SystemBarStyle.light(Color.TRANSPARENT, Color.TRANSPARENT),
-        )
+        enableEdgeToEdge()
         supportFragmentManager.findFragmentByTag(EPUB_TAG)?.let { stale ->
             supportFragmentManager.beginTransaction()
                 .remove(stale)

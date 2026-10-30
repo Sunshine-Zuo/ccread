@@ -9,9 +9,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 
 @Composable
 fun ReaderTopBar(
@@ -23,14 +25,18 @@ fun ReaderTopBar(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 10.dp),
+            .padding(horizontal = 20.dp, vertical = 8.dp),
     ) {
         Text(
             text = chapterTitle,
             modifier = Modifier
                 .align(Alignment.Center)
-                .padding(horizontal = 56.dp),
-            style = MaterialTheme.typography.bodySmall,
+                .padding(horizontal = 64.dp),
+            style = MaterialTheme.typography.labelMedium.copy(
+                fontFamily = FontFamily.Serif,
+                fontSize = 12.sp,
+                letterSpacing = 0.6.sp,
+            ),
             color = color,
             textAlign = TextAlign.Center,
             maxLines = 1,
@@ -39,7 +45,10 @@ fun ReaderTopBar(
         Text(
             text = time,
             modifier = Modifier.align(Alignment.CenterEnd),
-            style = MaterialTheme.typography.bodySmall,
+            style = MaterialTheme.typography.labelSmall.copy(
+                fontFeatureSettings = "tnum",
+                letterSpacing = 0.sp,
+            ),
             color = color,
         )
     }

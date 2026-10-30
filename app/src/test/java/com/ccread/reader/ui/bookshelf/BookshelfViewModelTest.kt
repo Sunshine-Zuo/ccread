@@ -62,17 +62,16 @@ class BookshelfViewModelTest {
 
     @Test
     fun `a new import opens the created book`() {
-        assertEquals(7L, ImportResult.Success(7).openedBookId(duplicateId = null))
+        assertEquals(7L, ImportResult.Success(7).openedBookId())
     }
 
     @Test
     fun `a duplicate import opens the book already on the shelf`() {
-        assertEquals(3L, ImportResult.Duplicate.openedBookId(duplicateId = 3))
+        assertEquals(3L, ImportResult.Duplicate(3).openedBookId())
     }
 
     @Test
     fun `a failed import opens nothing`() {
-        assertNull(ImportResult.Failed("坏了").openedBookId(duplicateId = 1))
-        assertNull(ImportResult.Duplicate.openedBookId(duplicateId = null))
+        assertNull(ImportResult.Failed("坏了").openedBookId())
     }
 }

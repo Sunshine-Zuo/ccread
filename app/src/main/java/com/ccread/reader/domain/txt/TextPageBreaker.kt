@@ -1,6 +1,5 @@
 package com.ccread.reader.domain.txt
 
-import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextMeasurer
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.Constraints
@@ -91,7 +90,7 @@ class ComposePageBreaker(
 
     private fun fits(text: String, start: Int, end: Int): Boolean {
         val result = measurer.measure(
-            text = AnnotatedString(text.substring(start, end)),
+            text = TxtIndent.page(text, start, end),
             style = style,
             constraints = Constraints(maxWidth = widthPx.coerceAtLeast(1)),
         )

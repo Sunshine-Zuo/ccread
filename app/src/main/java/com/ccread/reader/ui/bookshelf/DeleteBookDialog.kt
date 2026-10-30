@@ -1,10 +1,18 @@
 package com.ccread.reader.ui.bookshelf
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -27,21 +35,48 @@ fun DeleteBookDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("删除《${book.title}》") },
+        shape = RoundedCornerShape(12.dp),
+        title = { Text("删除书籍", style = MaterialTheme.typography.titleLarge) },
         text = {
             Column {
-                Text("确认从书架删除这本书？")
-                Row(
-                    modifier = Modifier.padding(top = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
+                Text(
+                    text = "确认从书架删除《${book.title}》？",
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+                Spacer(modifier = Modifier.height(14.dp))
+                Surface(
+                    shape = RoundedCornerShape(6.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant,
                 ) {
-                    Checkbox(checked = deleteOriginal, onCheckedChange = { deleteOriginal = it })
-                    Text("同时删除本地文件")
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { deleteOriginal = !deleteOriginal }
+                            .padding(start = 6.dp, end = 14.dp, top = 4.dp, bottom = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Checkbox(
+                            checked = deleteOriginal,
+                            onCheckedChange = { deleteOriginal = it },
+                        )
+                        Text(
+                            text = "同时删除本地文件",
+                            style = MaterialTheme.typography.bodyMedium,
+                            modifier = Modifier.padding(start = 4.dp),
+                        )
+                    }
                 }
             }
         },
         confirmButton = {
-            TextButton(onClick = { onConfirm(deleteOriginal) }) { Text("删除") }
+            TextButton(
+                onClick = { onConfirm(deleteOriginal) },
+                colors = ButtonDefaults.textButtonColors(
+                    contentColor = MaterialTheme.colorScheme.error,
+                ),
+            ) {
+                Text("删除")
+            }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) { Text("取消") }

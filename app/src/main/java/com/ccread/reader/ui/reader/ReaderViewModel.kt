@@ -7,6 +7,7 @@ import com.ccread.reader.data.repository.BookRepository
 import com.ccread.reader.data.settings.SettingsRepository
 import com.ccread.reader.domain.book.TxtBookIndexer
 import com.ccread.reader.domain.model.Book
+import com.ccread.reader.domain.model.BookFormat
 import com.ccread.reader.domain.model.Chapter
 import com.ccread.reader.domain.model.EpubProgress
 import com.ccread.reader.domain.model.PageMode
@@ -108,6 +109,29 @@ class ReaderViewModel(
     fun openSettings() = mutable.update { it.copy(overlays = OverlayState(settings = true)) }
     fun openBrightness() = mutable.update { it.copy(overlays = OverlayState(brightness = true)) }
     fun dismissOverlays() = mutable.update { it.copy(overlays = OverlayState()) }
+
+    fun previousChapter() = moveChapter(-1)
+
+    fun nextChapter() = moveChapter(1)
+
+    private fun moveChapter(delta: Int) {
+        val current = mutable.value
+        when (current.book?.format) {
+            BookFormat.TXT -> ChapterNavigation.txtTarget(
+                chapters = current.chapters,
+                currentIndex = current.currentChapterIndex,
+                delta = delta,
+            )?.let { target -> jumpTo(target.index) }
+
+            BookFormat.EPUB -> ChapterNavigation.epubTarget(
+                nodes = current.epubToc,
+                currentHref = current.epubCurrentHref,
+                delta = delta,
+            )?.let(::jumpToEpub)
+
+            null -> Unit
+        }
+    }
 
     fun updateReadingState(chapterTitle: String? = null, percent: Double? = null) {
         mutable.update {

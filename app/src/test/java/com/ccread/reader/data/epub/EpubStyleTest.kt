@@ -11,9 +11,31 @@ import org.junit.Test
 class EpubStyleTest {
 
     @Test
-    fun `font size scales from an 18sp baseline`() {
-        assertEquals(1.0, EpubStyle.fontScale(18), 0.001)
-        assertEquals(1.5, EpubStyle.fontScale(27), 0.001)
+    fun `font size matches txt sp using the webview 16px base`() {
+        assertEquals(18.0 / 16.0, EpubStyle.fontSizeFactor(18), 0.001)
+        assertEquals(27.0 / 16.0, EpubStyle.fontSizeFactor(27), 0.001)
+    }
+
+    @Test
+    fun `system font scale is applied so epub matches txt`() {
+        assertEquals(18.0 * 1.3 / 16.0, EpubStyle.fontSizeFactor(18, 1.3f), 0.001)
+    }
+
+    @Test
+    fun `custom font color overrides the book color`() {
+        val preferences = EpubStyle.preferences(
+            ReadingSettings(textColorArgb = 0xFF112233.toInt()),
+            PageMode.PAGED,
+        )
+
+        assertEquals(0xFF112233.toInt(), preferences.textColor?.int)
+    }
+
+    @Test
+    fun `font color stays untouched when not set`() {
+        val preferences = EpubStyle.preferences(ReadingSettings(), PageMode.PAGED)
+
+        assertNull(preferences.textColor)
     }
 
     @Test
@@ -25,6 +47,16 @@ class EpubStyleTest {
 
         assertEquals(0xFFCCE8CF.toInt(), preferences.backgroundColor?.int)
         assertNull(preferences.textColor)
+    }
+
+    @Test
+    fun `custom background overrides the preset background`() {
+        val preferences = EpubStyle.preferences(
+            ReadingSettings(customBackgroundArgb = 0xFF223344.toInt()),
+            PageMode.PAGED,
+        )
+
+        assertEquals(0xFF223344.toInt(), preferences.backgroundColor?.int)
     }
 
     @Test

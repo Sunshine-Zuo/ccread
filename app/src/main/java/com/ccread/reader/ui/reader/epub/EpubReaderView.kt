@@ -59,6 +59,7 @@ fun EpubReaderView(
     val activity = context as? FragmentActivity
     val scope = rememberCoroutineScope()
     val density = LocalDensity.current.density
+    val fontScale = LocalDensity.current.fontScale
     val session = remember(book.uri) { EpubSession(context) }
     var publication by remember { mutableStateOf<Publication?>(null) }
     var fragment by remember { mutableStateOf<EpubNavigatorFragment?>(null) }
@@ -107,7 +108,7 @@ fun EpubReaderView(
                     val factory = EpubNavigatorFactory(pub)
                         .createFragmentFactory(
                             initialLocator = initial,
-                            initialPreferences = EpubStyle.preferences(settings, mode),
+                            initialPreferences = EpubStyle.preferences(settings, mode, fontScale),
                             configuration = EpubNavigatorFragment.Configuration(
                                 shouldApplyInsetsPadding = false,
                             ).apply {
@@ -168,8 +169,16 @@ fun EpubReaderView(
         }
     }
 
-    LaunchedEffect(fragment, settings.fontSize, settings.backgroundId, settings.marginHorizontal, mode) {
-        fragment?.submitPreferences(EpubStyle.preferences(settings, mode))
+    LaunchedEffect(
+        fragment,
+        settings.fontSize,
+        settings.backgroundId,
+        settings.textColorArgb,
+        settings.marginHorizontal,
+        mode,
+        fontScale,
+    ) {
+        fragment?.submitPreferences(EpubStyle.preferences(settings, mode, fontScale))
     }
 
     LaunchedEffect(fragment, publication) {

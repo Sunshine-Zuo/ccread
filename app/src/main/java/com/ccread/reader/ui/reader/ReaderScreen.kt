@@ -15,9 +15,13 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -34,6 +38,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.dp
@@ -51,6 +56,7 @@ import com.ccread.reader.domain.settings.BackgroundPalette
 import com.ccread.reader.domain.settings.BrightnessController
 import com.ccread.reader.ui.reader.epub.EpubReaderView
 import com.ccread.reader.ui.reader.txt.TxtReaderView
+import com.ccread.reader.ui.theme.JingduTheme
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import kotlinx.coroutines.delay
@@ -117,19 +123,29 @@ fun ReaderScreen(bookId: Long, onBack: () -> Unit, onMissingFile: () -> Unit = {
         }
     }
 
-    val backgroundStyle = BackgroundPalette.styleOf(state.settings.backgroundId)
+    val backgroundStyle = BackgroundPalette.resolve(
+        state.settings.backgroundId,
+        state.settings.customBackgroundArgb,
+    )
+    val textColor = state.settings.textColorArgb?.let { Color(it) } ?: backgroundStyle.text
+    val readerDark = backgroundStyle.background.luminance() < 0.5f
+    JingduTheme(darkTheme = readerDark) {
     Surface(
         modifier = Modifier.fillMaxSize(),
         color = backgroundStyle.background,
     ) {
         if (!state.loaded) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text("正在打开…")
+                Text(
+                    text = "正在打开…",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
         } else if (state.book == null) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("找不到这本书")
+                    Text("找不到这本书", style = MaterialTheme.typography.titleMedium)
                     TextButton(onClick = onBack) { Text("返回书架") }
                 }
             }
@@ -139,7 +155,7 @@ fun ReaderScreen(bookId: Long, onBack: () -> Unit, onMissingFile: () -> Unit = {
                     ReaderTopBar(
                         chapterTitle = state.chapterTitle,
                         time = timeText,
-                        color = backgroundStyle.text.copy(alpha = 0.7f),
+                        color = textColor.copy(alpha = 0.7f),
                     )
                     Box(
                         modifier = Modifier
@@ -154,7 +170,7 @@ fun ReaderScreen(bookId: Long, onBack: () -> Unit, onMissingFile: () -> Unit = {
                                     chapters = state.chapters,
                                     settings = state.settings,
                                     mode = state.mode,
-                                    textColor = backgroundStyle.text,
+                                    textColor = textColor,
                                     startChapterIndex = state.startChapterIndex,
                                     startOffsetInChapter = state.startOffsetInChapter,
                                     onCenterTap = { viewModel.onTapZone(TapZone.CENTER) },
@@ -183,7 +199,7 @@ fun ReaderScreen(bookId: Long, onBack: () -> Unit, onMissingFile: () -> Unit = {
                     }
                     ReaderBottomBar(
                         percentText = state.percentText,
-                        color = backgroundStyle.text.copy(alpha = 0.7f),
+                        color = textColor.copy(alpha = 0.7f),
                     )
                 }
 
@@ -191,15 +207,26 @@ fun ReaderScreen(bookId: Long, onBack: () -> Unit, onMissingFile: () -> Unit = {
                     Surface(
                         modifier = Modifier
                             .align(Alignment.Center)
-                            .padding(16.dp),
-                        tonalElevation = 6.dp,
+                            .padding(24.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                        shadowElevation = 12.dp,
                     ) {
                         Column(
-                            modifier = Modifier.padding(16.dp),
+                            modifier = Modifier.padding(20.dp),
                             horizontalAlignment = Alignment.CenterHorizontally,
                         ) {
-                            Text("找不到原文件，可能已被移动或删除")
-                            TextButton(onClick = onBack) { Text("返回书架重新选择") }
+                            Text(
+                                text = "找不到原文件，可能已被移动或删除",
+                                style = MaterialTheme.typography.bodyMedium,
+                            )
+                            Spacer(modifier = Modifier.height(12.dp))
+                            FilledTonalButton(
+                                onClick = onBack,
+                                shape = RoundedCornerShape(6.dp),
+                            ) {
+                                Text("返回书架重新选择")
+                            }
                         }
                     }
                 }
@@ -212,7 +239,7 @@ fun ReaderScreen(bookId: Long, onBack: () -> Unit, onMissingFile: () -> Unit = {
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
-                            .background(Color.Black.copy(alpha = 0.25f))
+                            .background(Color.Black.copy(alpha = 0.32f))
                             .clickable { viewModel.dismissOverlays() },
                     )
                 }
@@ -223,6 +250,36 @@ fun ReaderScreen(bookId: Long, onBack: () -> Unit, onMissingFile: () -> Unit = {
                     modifier = Modifier.align(Alignment.BottomCenter),
                 ) {
                     ReaderMenu(
+                        onPreviousChapter = viewModel::previousChapter,
+                        onNextChapter = viewModel::nextChapter,
+                        canPreviousChapter = state.book?.let { book ->
+                            when (book.format) {
+                                BookFormat.TXT -> ChapterNavigation.txtTarget(
+                                    state.chapters,
+                                    state.currentChapterIndex,
+                                    -1,
+                                ) != null
+                                BookFormat.EPUB -> ChapterNavigation.epubTarget(
+                                    state.epubToc,
+                                    state.epubCurrentHref,
+                                    -1,
+                                ) != null
+                            }
+                        } == true,
+                        canNextChapter = state.book?.let { book ->
+                            when (book.format) {
+                                BookFormat.TXT -> ChapterNavigation.txtTarget(
+                                    state.chapters,
+                                    state.currentChapterIndex,
+                                    1,
+                                ) != null
+                                BookFormat.EPUB -> ChapterNavigation.epubTarget(
+                                    state.epubToc,
+                                    state.epubCurrentHref,
+                                    1,
+                                ) != null
+                            }
+                        } == true,
                         onToc = viewModel::openToc,
                         onSettings = viewModel::openSettings,
                         onBrightness = viewModel::openBrightness,
@@ -296,6 +353,7 @@ fun ReaderScreen(bookId: Long, onBack: () -> Unit, onMissingFile: () -> Unit = {
                 )
             }
         }
+    }
     }
 }
 

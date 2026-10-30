@@ -28,6 +28,18 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
             preferences[Keys.MARGIN] = next.marginHorizontal
             preferences[Keys.LINE_SPACING] = next.lineSpacing
             preferences[Keys.BACKGROUND] = next.backgroundId.name
+            val customBackground = next.customBackgroundArgb
+            if (customBackground == null) {
+                preferences.remove(Keys.CUSTOM_BACKGROUND)
+            } else {
+                preferences[Keys.CUSTOM_BACKGROUND] = customBackground
+            }
+            val textColor = next.textColorArgb
+            if (textColor == null) {
+                preferences.remove(Keys.TEXT_COLOR)
+            } else {
+                preferences[Keys.TEXT_COLOR] = textColor
+            }
             preferences[Keys.PAGE_MODE] = next.pageMode.name
             preferences[Keys.FOLLOW_SYSTEM_BRIGHTNESS] = next.followSystemBrightness
             preferences[Keys.BRIGHTNESS] = next.brightness
@@ -44,6 +56,8 @@ private object Keys {
     val MARGIN = intPreferencesKey("margin")
     val LINE_SPACING = floatPreferencesKey("line_spacing")
     val BACKGROUND = stringPreferencesKey("background")
+    val CUSTOM_BACKGROUND = intPreferencesKey("custom_background")
+    val TEXT_COLOR = intPreferencesKey("text_color")
     val PAGE_MODE = stringPreferencesKey("page_mode")
     val FOLLOW_SYSTEM_BRIGHTNESS = booleanPreferencesKey("follow_system_brightness")
     val BRIGHTNESS = floatPreferencesKey("brightness")
@@ -58,6 +72,8 @@ private fun Preferences.toSettings(): ReadingSettings {
         backgroundId = this[Keys.BACKGROUND]
             ?.let { runCatching { BackgroundId.valueOf(it) }.getOrNull() }
             ?: defaults.backgroundId,
+        customBackgroundArgb = this[Keys.CUSTOM_BACKGROUND],
+        textColorArgb = this[Keys.TEXT_COLOR],
         pageMode = this[Keys.PAGE_MODE]
             ?.let { runCatching { PageMode.valueOf(it) }.getOrNull() }
             ?: defaults.pageMode,

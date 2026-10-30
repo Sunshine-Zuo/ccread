@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.provider.OpenableColumns
+import com.ccread.reader.data.file.BookFileStore
 import com.ccread.reader.data.file.ContentUriSeekableFile
 import com.ccread.reader.data.repository.BookRepository
 import com.ccread.reader.domain.model.Book
@@ -23,6 +24,8 @@ class BookImporter(
     private val repository: BookRepository,
 ) {
 
+    private val fileStore = BookFileStore(context)
+
     suspend fun import(uri: Uri): ImportResult = withContext(Dispatchers.IO) {
         try {
             val resolver = context.contentResolver
@@ -31,13 +34,21 @@ class BookImporter(
             val format = ImportRules.formatOf(fileName, resolver.getType(uri))
                 ?: return@withContext ImportResult.UnsupportedFormat
 
-            if (repository.findByUri(uri.toString()) != null) {
-                return@withContext ImportResult.Duplicate
+            repository.findByUri(uri.toString())?.let { existing ->
+                return@withContext ImportResult.Duplicate(existing.id)
             }
 
-            persistPermission(resolver, uri)
+            // 微信等应用通过 ACTION_VIEW 传来的 URI 往往只带临时读权限，
+            // 无法持久化；此时复制到应用私有目录，否则进程结束后文件就再也打不开。
+            val (storedUri, needsCopy) = storageTarget(resolver, uri, format)
+            repository.findByUri(storedUri.toString())?.let { existing ->
+                return@withContext ImportResult.Duplicate(existing.id)
+            }
+            if (needsCopy && !fileStore.copy(uri, storedUri)) {
+                return@withContext ImportResult.Failed("无法保存文件副本")
+            }
 
-            val seekable = openSeekable(uri) ?: return@withContext ImportResult.NotSeekable
+            val seekable = openSeekable(storedUri) ?: return@withContext ImportResult.NotSeekable
             seekable.use {
                 val limit = ImportRules.limitBytes(format)
                 if (reportedSize != null && reportedSize > limit) {
@@ -55,7 +66,7 @@ class BookImporter(
                     id = 0,
                     title = ImportRules.titleOf(fileName),
                     format = format,
-                    uri = uri.toString(),
+                    uri = storedUri.toString(),
                     sizeBytes = seekable.sizeBytes,
                     importedAt = now,
                     lastReadAt = null,
@@ -88,8 +99,11 @@ class BookImporter(
                 return@withContext ImportResult.Failed("文件格式与原书不一致")
             }
 
-            persistPermission(resolver, uri)
-            val seekable = openSeekable(uri) ?: return@withContext ImportResult.NotSeekable
+            val (storedUri, needsCopy) = storageTarget(resolver, uri, format)
+            if (needsCopy && !fileStore.copy(uri, storedUri)) {
+                return@withContext ImportResult.Failed("无法保存文件副本")
+            }
+            val seekable = openSeekable(storedUri) ?: return@withContext ImportResult.NotSeekable
 
             seekable.use {
                 val limit = ImportRules.limitBytes(format)
@@ -124,7 +138,7 @@ class BookImporter(
                         repository.updateBook(
                             book.copy(
                                 title = ImportRules.titleOf(fileName),
-                                uri = uri.toString(),
+                                uri = storedUri.toString(),
                                 sizeBytes = seekable.sizeBytes,
                                 encodingName = charset.name(),
                                 totalChars = index.totalChars,
@@ -132,6 +146,7 @@ class BookImporter(
                             ),
                             chapters,
                         )
+                        discardOldCopy(book, storedUri)
                         ImportResult.Success(book.id)
                     }
 
@@ -139,11 +154,12 @@ class BookImporter(
                         repository.updateBook(
                             book.copy(
                                 title = ImportRules.titleOf(fileName),
-                                uri = uri.toString(),
+                                uri = storedUri.toString(),
                                 sizeBytes = seekable.sizeBytes,
                             ),
                             emptyList(),
                         )
+                        discardOldCopy(book, storedUri)
                         ImportResult.Success(book.id)
                     }
                 }
@@ -153,16 +169,28 @@ class BookImporter(
         }
     }
 
-    private fun persistPermission(resolver: ContentResolver, uri: Uri) {
+    private fun persistPermission(resolver: ContentResolver, uri: Uri): Boolean {
         val readWrite = Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
-        val persisted = runCatching {
-            resolver.takePersistableUriPermission(uri, readWrite)
-        }.isSuccess
-        if (!persisted) {
-            runCatching {
-                resolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
-            }
+        if (runCatching { resolver.takePersistableUriPermission(uri, readWrite) }.isSuccess) {
+            return true
         }
+        return runCatching {
+            resolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }.isSuccess
+    }
+
+    /** 能持久化授权时直接引用原文件，否则返回应用私有副本的位置。 */
+    private fun storageTarget(
+        resolver: ContentResolver,
+        uri: Uri,
+        format: BookFormat,
+    ): Pair<Uri, Boolean> {
+        if (uri.scheme == "file" || persistPermission(resolver, uri)) return uri to false
+        return fileStore.targetFor(uri, format) to true
+    }
+
+    private fun discardOldCopy(book: Book, newUri: Uri) {
+        if (book.uri != newUri.toString()) fileStore.deleteOwned(Uri.parse(book.uri))
     }
 
     private suspend fun importTxt(book: Book, seekable: SeekableFile): ImportResult {

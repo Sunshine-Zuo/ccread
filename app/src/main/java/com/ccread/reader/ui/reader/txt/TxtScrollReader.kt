@@ -31,6 +31,7 @@ import com.ccread.reader.domain.progress.ProgressCalculator
 import com.ccread.reader.domain.txt.ScrollItem
 import com.ccread.reader.domain.txt.ScrollMapping
 import com.ccread.reader.domain.txt.TxtBookSource
+import com.ccread.reader.domain.txt.TxtIndent
 import com.ccread.reader.ui.reader.ReaderInteraction
 import com.ccread.reader.ui.reader.TapZone
 import kotlinx.coroutines.Dispatchers
@@ -150,7 +151,7 @@ fun TxtScrollReader(
     ) {
         items(count = entries.size, key = { index -> "${entries[index].chapterIndex}:${entries[index].charStart}" }) { index ->
             Text(
-                text = entries[index].text,
+                text = TxtIndent.paragraph(entries[index].text),
                 style = textStyle,
                 modifier = Modifier
                     .fillMaxWidth()

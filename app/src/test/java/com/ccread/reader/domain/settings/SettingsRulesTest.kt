@@ -31,6 +31,23 @@ class SettingsRulesTest {
     }
 
     @Test
+    fun `font color presets pair one to one with background presets`() {
+        assertEquals(BackgroundPalette.presets.size, FontColorPalette.presets.size)
+        assertEquals(BackgroundPalette.presets.map { it.text }, FontColorPalette.presets)
+    }
+
+    @Test
+    fun `custom background resolves a contrasting text color`() {
+        val dark = BackgroundPalette.resolve(BackgroundId.BEIGE, 0xFF101010.toInt())
+        assertEquals(Color(0xFF101010), dark.background)
+        assertEquals(Color(0xFFE8E8E8), dark.text)
+
+        val light = BackgroundPalette.resolve(BackgroundId.BLACK, 0xFFFFFFFF.toInt())
+        assertEquals(Color(0xFFFFFFFF), light.background)
+        assertEquals(Color(0xFF1A1A1A), light.text)
+    }
+
+    @Test
     fun `following system brightness overrides manual value`() {
         assertEquals(-1f, BrightnessController.windowBrightness(true, 0.7f), 0.001f)
         assertEquals(0.7f, BrightnessController.windowBrightness(false, 0.7f), 0.001f)

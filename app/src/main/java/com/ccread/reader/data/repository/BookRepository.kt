@@ -7,6 +7,7 @@ import android.provider.DocumentsContract
 import com.ccread.reader.data.db.BookDao
 import com.ccread.reader.data.db.BookEntity
 import com.ccread.reader.data.db.ChapterEntity
+import com.ccread.reader.data.file.BookFileStore
 import com.ccread.reader.domain.model.Book
 import com.ccread.reader.domain.model.BookFormat
 import com.ccread.reader.domain.model.Chapter
@@ -14,6 +15,7 @@ import com.ccread.reader.domain.model.ProgressCodec
 import com.ccread.reader.domain.model.ReadingProgress
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import java.io.File
 
 interface BookRepository {
     fun observeBooks(): Flow<List<Book>>
@@ -31,6 +33,7 @@ interface BookRepository {
 class RoomBookRepository(
     private val dao: BookDao,
     private val contentResolver: ContentResolver,
+    private val fileStore: BookFileStore,
 ) : BookRepository {
 
     override fun observeBooks(): Flow<List<Book>> =
@@ -58,7 +61,13 @@ class RoomBookRepository(
 
     override suspend fun deleteBook(book: Book, deleteOriginalFile: Boolean): Boolean {
         val entity = dao.getBook(book.id) ?: return !deleteOriginalFile
-        val originalDeleted = if (deleteOriginalFile) deleteOriginal(book.uri) else true
+        val uri = Uri.parse(book.uri)
+        val originalDeleted = when {
+            // 应用私有副本属于 App 自己的存储，移出书架时一并清理。
+            fileStore.owns(uri) -> fileStore.deleteOwned(uri)
+            deleteOriginalFile -> deleteOriginal(book.uri)
+            else -> true
+        }
         dao.deleteBook(entity)
         releasePermission(book.uri)
         return originalDeleted
@@ -73,7 +82,12 @@ class RoomBookRepository(
     override suspend fun findByUri(uri: String): Book? = dao.findByUri(uri)?.toDomain()
 
     private fun deleteOriginal(uri: String): Boolean = runCatching {
-        DocumentsContract.deleteDocument(contentResolver, Uri.parse(uri))
+        val parsed = Uri.parse(uri)
+        if (parsed.scheme == "file") {
+            parsed.path?.let { File(it).delete() } == true
+        } else {
+            DocumentsContract.deleteDocument(contentResolver, parsed)
+        }
     }.getOrDefault(false)
 
     private fun releasePermission(uri: String) {

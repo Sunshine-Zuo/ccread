@@ -9,6 +9,8 @@ data class ReadingSettings(
     val marginHorizontal: Int = 24,
     val lineSpacing: Float = 1.5f,
     val backgroundId: BackgroundId = BackgroundId.BEIGE,
+    val customBackgroundArgb: Int? = null,
+    val textColorArgb: Int? = null,
     val pageMode: PageMode = PageMode.PAGED,
     val followSystemBrightness: Boolean = true,
     val brightness: Float = 0.5f,
